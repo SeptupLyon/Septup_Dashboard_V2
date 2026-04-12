@@ -116,6 +116,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
 .st-draft { color: var(--text3); border: 1px solid var(--border2); }
 .st-valid { color: var(--accent); border: 1px solid var(--aborder); }
 .st-used { color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+.st-tourne { color: #f5c518; border: 1px solid rgba(245,197,24,0.3); } /* Doré = tourné */
 .script-arrow { font-size: 18px; color: var(--text3); cursor: pointer; flex-shrink: 0; padding: 0 4px; }
 .export-bar { margin: 0 16px 12px; border: 1px solid var(--aborder); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; background: var(--adim); }
 .export-count { font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -240,13 +241,36 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
 .editor-ta:focus { border-color: var(--accent); }
 .editor-ta .script-section-title { display: inline-block; background: var(--accent); color: #000; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 2px 10px; border-radius: 4px; margin-bottom: 4px; }
 .editor-ta:empty:before { content: attr(data-placeholder); color: var(--text3); }
-.editor-regen-btn { width: 100%; background: transparent; border: 1px solid var(--aborder); border-radius: 12px; padding: 14px; font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* editor-regen-btn supprimé */
 .copy-script-btn { background: var(--adim); border: 1px solid var(--aborder); border-radius: 12px; padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--accent); cursor: pointer; width: 100%; text-align: center; margin-top: 10px; }
 .editor-footer { padding: 12px 20px 24px; border-top: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
 .sv-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .sv-btn.primary { background: var(--accent); color: #000; border: none; }
 .sv-btn.ghost { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
 .sv-btn.danger { background: transparent; border: 1px solid rgba(255,95,95,0.3); color: var(--red); }
+
+/* Champ mot de passe avec bouton voir/masquer */
+.pwd-wrap { position: relative; }
+.pwd-wrap .field-input { padding-right: 44px; } /* espace pour l'icône */
+.pwd-toggle {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 16px; padding: 4px;
+  line-height: 1;
+}
+.pwd-toggle:active { color: var(--accent); }
+
+/* Spinner de chargement pendant le login */
+.login-spinner {
+  display: none; /* caché par défaut */
+  width: 20px; height: 20px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 8px;
+}
+.login-spinner.visible { display: block; }
 </style>
 </head>
 <body>
@@ -261,121 +285,220 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
   </div>
   <div class="auth-body">
     <div class="field"><label class="field-lbl">Email</label><input class="field-input" type="email" id="login-email" placeholder="hello@studio.fr"></div>
-    <div class="field"><label class="field-lbl">Mot de passe</label><input class="field-input" type="password" id="login-password" placeholder="••••••••"></div>
+    <div class="field">
+      <label class="field-lbl">Mot de passe</label>
+      <div class="pwd-wrap">
+        <input class="field-input" type="password" id="login-password" placeholder="••••••••">
+        <button class="pwd-toggle" type="button" onclick="togglePwd('login-password', this)" tabindex="-1">👁</button>
+      </div>
+    </div>
     <div class="sp"></div>
-    <button class="btn" onclick="doLogin()"><span class="btn-txt">Se connecter</span><span class="btn-arr">→</span></button>
+    <div class="login-spinner" id="login-spinner"></div>
+    <button class="btn" id="login-btn" onclick="doLogin()"><span class="btn-txt">Se connecter</span><span class="btn-arr">→</span></button>
     <button class="btn-ghost" onclick="go('ob1')">Creer un compte</button>
     <button class="btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:10px;" onclick="doLoginGoogle()"><span style="font-size:15px;font-weight:700;color:#4285F4;">G</span> Continuer avec Google</button>
     <div class="auth-link" onclick="go('forgot')">Mot de passe oublie ?</div>
   </div>
 </div>
 
-<!-- OB1 -->
+<!-- OB1 : INFOS PERSO -->
 <div class="screen" id="screen-ob1">
-  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;"><div class="logo">septup.</div><div style="font-size:12px;color:var(--text3);">1 / 5</div></div>
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div class="logo">septup.</div>
+    <div style="font-size:12px;color:var(--text3);">1 / 5</div>
+  </div>
   <div class="ob-wrap">
-    <div class="ob-prog"><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
-    <div class="ob-bloc">Bloc 1 - Qui tu es</div>
-    <div class="ob-q">Tu representes ?</div>
-    <div class="ob-opts">
-      <div class="ob-opt" onclick="selOpt(this)">Moi-meme (personal brand)</div>
-      <div class="ob-opt" onclick="selOpt(this)">Une entreprise</div>
-      <div class="ob-opt" onclick="selOpt(this)">Une marque</div>
+    <div class="ob-prog">
+      <div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div>
     </div>
-    <div class="field"><label class="field-lbl">Secteur</label><input class="field-input" id="ob1-secteur" placeholder="Ex: Immobilier, Tech..."></div>
-    <div class="field"><label class="field-lbl">J aide [qui] a [quoi] grace a [comment]</label><textarea class="field-ta" id="ob1-activite" rows="2" placeholder="J aide..."></textarea></div>
-    <div class="ob-nav"><div class="ob-back" onclick="go('login')">Annuler</div><button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob2')"><span class="btn-txt">Suivant</span><span class="btn-arr">→</span></button></div>
+    <div class="ob-bloc">Etape 1 — Tes informations</div>
+    <div class="ob-q">On commence par toi</div>
+    <div class="field">
+      <label class="field-lbl">Nom complet</label>
+      <input class="field-input" id="ob-nom" placeholder="Jean Dupont">
+    </div>
+    <div class="field">
+      <label class="field-lbl">Email</label>
+      <input class="field-input" type="email" id="ob-email" placeholder="hello@studio.fr">
+    </div>
+    <div class="field">
+      <label class="field-lbl">Mot de passe</label>
+      <div class="pwd-wrap">
+        <input class="field-input" type="password" id="ob-password" placeholder="Min. 8 caracteres">
+        <button class="pwd-toggle" type="button" onclick="togglePwd('ob-password', this)" tabindex="-1">👁</button>
+      </div>
+    </div>
+    <div class="ob-nav">
+      <div class="ob-back" onclick="go('login')">Annuler</div>
+      <button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob2')">
+        <span class="btn-txt">Suivant</span><span class="btn-arr">→</span>
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- OB2 -->
+<!-- OB2 : IDENTITE BUSINESS -->
 <div class="screen" id="screen-ob2">
-  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;"><div class="logo">septup.</div><div style="font-size:12px;color:var(--text3);">2 / 5</div></div>
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div class="logo">septup.</div>
+    <div style="font-size:12px;color:var(--text3);">2 / 5</div>
+  </div>
   <div class="ob-wrap">
-    <div class="ob-prog"><div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
-    <div class="ob-bloc">Bloc 2 - Ton contenu</div>
-    <div class="ob-q">Type de contenu ?</div>
-    <div class="ob-opts">
-      <div class="ob-opt" onclick="selOpt(this)">Contenu court</div>
-      <div class="ob-opt" onclick="selOpt(this)">Podcast</div>
-      <div class="ob-opt" onclick="selOpt(this)">Les deux</div>
+    <div class="ob-prog">
+      <div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div>
     </div>
-    <div class="ob-bloc">Objectif principal</div>
-    <div class="ob-chips">
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Notoriete</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Vendre</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Eduquer</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Inspirer</div>
+    <div class="ob-bloc">Etape 2 — Identite business</div>
+    <div class="ob-q">Ton activite</div>
+    <div class="field">
+      <label class="field-lbl">Secteur / metier</label>
+      <input class="field-input" id="ob2-activite" placeholder="Ex: Coach business, Agence immo, SaaS RH...">
     </div>
-    <div class="field"><label class="field-lbl">Frequence visee</label><input class="field-input" id="ob2-freq" placeholder="Ex: 2x par semaine"></div>
-    <div class="ob-nav"><div class="ob-back" onclick="go('ob1')">← Retour</div><button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob3')"><span class="btn-txt">Suivant</span><span class="btn-arr">→</span></button></div>
+    <div class="field">
+      <label class="field-lbl">Offre principale</label>
+      <input class="field-input" id="ob2-offre" placeholder="Ex: Formation en ligne, Logiciel de gestion...">
+    </div>
+    <div class="field">
+      <label class="field-lbl">Prix moyen de l offre</label>
+      <div class="ob-opts" id="ob2-prix-opts">
+        <div class="ob-opt" onclick="selOpt(this)">Moins de 500 €</div>
+        <div class="ob-opt" onclick="selOpt(this)">500 € – 2 000 €</div>
+        <div class="ob-opt" onclick="selOpt(this)">2 000 € – 10 000 €</div>
+        <div class="ob-opt" onclick="selOpt(this)">Plus de 10 000 €</div>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-lbl">Niveau de maturite</label>
+      <div class="ob-opts" id="ob2-maturite-opts">
+        <div class="ob-opt" onclick="selOpt(this)">Debutant — je lance mon activite</div>
+        <div class="ob-opt" onclick="selOpt(this)">Intermediaire — j ai deja des clients</div>
+        <div class="ob-opt" onclick="selOpt(this)">Avance — j ai une audience et une offre etablie</div>
+      </div>
+    </div>
+    <div class="ob-nav">
+      <div class="ob-back" onclick="go('ob1')">← Retour</div>
+      <button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob3')">
+        <span class="btn-txt">Suivant</span><span class="btn-arr">→</span>
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- OB3 -->
+<!-- OB3 : CIBLE -->
 <div class="screen" id="screen-ob3">
-  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;"><div class="logo">septup.</div><div style="font-size:12px;color:var(--text3);">3 / 5</div></div>
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div class="logo">septup.</div>
+    <div style="font-size:12px;color:var(--text3);">3 / 5</div>
+  </div>
   <div class="ob-wrap">
-    <div class="ob-prog"><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
-    <div class="ob-bloc">Bloc 3 - Ta cible</div>
-    <div class="ob-q">Qui est ta cible ?</div>
-    <div class="ob-opts">
-      <div class="ob-opt" onclick="selOpt(this)">B2B</div>
-      <div class="ob-opt" onclick="selOpt(this)">B2C</div>
-      <div class="ob-opt" onclick="selOpt(this)">Les deux</div>
+    <div class="ob-prog">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div>
     </div>
-    <div class="field"><label class="field-lbl">Qui regarde ton contenu ?</label><textarea class="field-ta" id="ob3-cible" rows="2" placeholder="Decris ton audience"></textarea></div>
-    <div class="field"><label class="field-lbl">Le plus grand probleme que tu resous</label><input class="field-input" id="ob3-probleme" placeholder="Ex: Manque de visibilite..."></div>
-    <div class="ob-nav"><div class="ob-back" onclick="go('ob2')">← Retour</div><button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob4')"><span class="btn-txt">Suivant</span><span class="btn-arr">→</span></button></div>
+    <div class="ob-bloc">Etape 3 — Ta cible</div>
+    <div class="ob-q">A qui tu parles ?</div>
+    <div class="field">
+      <label class="field-lbl">Mon client ideal c est</label>
+      <input class="field-input" id="ob3-cible" placeholder="Ex: Directeur RH en PME, entrepreneur solo, gerant de restaurant...">
+    </div>
+    <div class="field">
+      <label class="field-lbl">Son plus grand probleme (ce qui l empeche de dormir)</label>
+      <textarea class="field-ta" id="ob3-douleur" rows="3" placeholder="Ex: Il n arrive pas a recruter les bons profils et perd du temps a former des gens qui partent..."></textarea>
+    </div>
+    <div class="field">
+      <label class="field-lbl">La transformation que tu lui apportes</label>
+      <textarea class="field-ta" id="ob3-transformation" rows="3" placeholder="Ex: Il passe de 3 mois de recrutement a 3 semaines avec les bons candidats..."></textarea>
+    </div>
+    <div class="ob-nav">
+      <div class="ob-back" onclick="go('ob2')">← Retour</div>
+      <button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob4')">
+        <span class="btn-txt">Suivant</span><span class="btn-arr">→</span>
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- OB4 -->
+<!-- OB4 : OBJECTIF CONTENU -->
 <div class="screen" id="screen-ob4">
-  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;"><div class="logo">septup.</div><div style="font-size:12px;color:var(--text3);">4 / 5</div></div>
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div class="logo">septup.</div>
+    <div style="font-size:12px;color:var(--text3);">4 / 5</div>
+  </div>
   <div class="ob-wrap">
-    <div class="ob-prog"><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div></div>
-    <div class="ob-bloc">Bloc 4 - Ta voix</div>
-    <div class="ob-q">Ton ton ?</div>
-    <div class="ob-chips">
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Serieux</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Decale</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Expert</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Accessible</div>
-      <div class="ob-chip" onclick="this.classList.toggle('sel')">Inspirant</div>
+    <div class="ob-prog">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div>
     </div>
-    <div class="field"><label class="field-lbl">Un createur dont tu aimes le style (optionnel)</label><input class="field-input" id="ob4-style" placeholder="Ex: Alex Hormozi..."></div>
-    <div class="field"><label class="field-lbl">Ce qui te differencie</label><textarea class="field-ta" id="ob4-diff" rows="2" placeholder="Ce que tu fais que personne ne fait..."></textarea></div>
-    <div class="ob-nav"><div class="ob-back" onclick="go('ob3')">← Retour</div><button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob5')"><span class="btn-txt">Suivant</span><span class="btn-arr">→</span></button></div>
+    <div class="ob-bloc">Etape 4 — Objectif contenu</div>
+    <div class="ob-q">Tu crees du contenu pour quoi ?</div>
+    <div class="field">
+      <label class="field-lbl">Objectif principal</label>
+      <div class="ob-opts" id="ob4-objectif-opts">
+        <div class="ob-opt" onclick="selOpt(this)">Notoriete — etre connu et reconnu</div>
+        <div class="ob-opt" onclick="selOpt(this)">Engagement — creer une communaute</div>
+        <div class="ob-opt" onclick="selOpt(this)">Leads — generer des prospects</div>
+        <div class="ob-opt" onclick="selOpt(this)">Vente — convertir directement</div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:16px;">
+      <label class="field-lbl">KPI prioritaire</label>
+      <div class="ob-chips" id="ob4-kpi-chips">
+        <div class="ob-chip" onclick="this.classList.toggle('sel')">Vues</div>
+        <div class="ob-chip" onclick="this.classList.toggle('sel')">Abonnes</div>
+        <div class="ob-chip" onclick="this.classList.toggle('sel')">DM / messages</div>
+        <div class="ob-chip" onclick="this.classList.toggle('sel')">Clics lien</div>
+        <div class="ob-chip" onclick="this.classList.toggle('sel')">Appels decouverte</div>
+      </div>
+    </div>
+    <div class="ob-nav">
+      <div class="ob-back" onclick="go('ob3')">← Retour</div>
+      <button class="btn" style="width:auto;padding:13px 24px;" onclick="go('ob5')">
+        <span class="btn-txt">Suivant</span><span class="btn-arr">→</span>
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- OB5 -->
+<!-- OB5 : ADN COMMUNICATION -->
 <div class="screen" id="screen-ob5">
-  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;"><div class="logo">septup.</div><div style="font-size:12px;color:var(--text3);">5 / 5</div></div>
-  <div class="ob-wrap">
-    <div class="ob-prog"><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div></div>
-    <div class="ob-bloc">Bloc 5 - A l aise devant la camera ?</div>
-    <div class="ob-q">Ton niveau a l ecran ?</div>
-    <div class="ob-opts">
-      <div class="ob-opt" onclick="selOpt(this)">Pas du tout a l aise</div>
-      <div class="ob-opt" onclick="selOpt(this)">Un peu timide</div>
-      <div class="ob-opt" onclick="selOpt(this)">Correct mais perfectible</div>
-      <div class="ob-opt" onclick="selOpt(this)">Tres a l aise</div>
-    </div>
-    <div class="field" style="margin-top:16px;"><label class="field-lbl">Email</label><input class="field-input" type="email" id="ob-email" placeholder="hello@studio.fr"></div>
-    <div class="field"><label class="field-lbl">Mot de passe</label><input class="field-input" type="password" id="ob-password" placeholder="Min. 8 caracteres"></div>
-    <div class="ob-nav"><div class="ob-back" onclick="go('ob4')">← Retour</div><button class="btn" style="width:auto;padding:13px 24px;" onclick="doSignup()"><span class="btn-txt">Terminer</span><span class="btn-arr">→</span></button></div>
+  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div class="logo">septup.</div>
+    <div style="font-size:12px;color:var(--text3);">5 / 5</div>
   </div>
-</div>
-
-<!-- OB DONE -->
-<div class="screen" id="screen-ob-done">
-  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:16px;">✦</div>
-    <div style="font-size:26px;font-weight:700;margin-bottom:8px;">Profil cree !</div>
-    <div style="font-size:14px;color:var(--text2);margin-bottom:36px;line-height:1.7;">Ton profil de marque est pret.<br>L IA va s adapter a ton style.</div>
-    <button class="btn" style="max-width:280px;" onclick="go('home')"><span class="btn-txt">Acceder a l app</span><span class="btn-arr">→</span></button>
+  <div class="ob-wrap">
+    <div class="ob-prog">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div>
+    </div>
+    <div class="ob-bloc">Etape 5 — ADN de communication</div>
+    <div class="ob-q">Comment tu parles ?</div>
+    <div class="field">
+      <label class="field-lbl">Ton prefere</label>
+      <div class="ob-opts" id="ob5-ton-opts">
+        <div class="ob-opt" onclick="selOpt(this)">Fun et accessible</div>
+        <div class="ob-opt" onclick="selOpt(this)">Serieux et professionnel</div>
+        <div class="ob-opt" onclick="selOpt(this)">Premium et inspire</div>
+        <div class="ob-opt" onclick="selOpt(this)">Provocateur et direct</div>
+        <div class="ob-opt" onclick="selOpt(this)">Inspirant et humain</div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px;">
+      <label class="field-lbl">Niveau d intensite</label>
+      <div class="ob-opts" id="ob5-intensite-opts">
+        <div class="ob-opt" onclick="selOpt(this)">Calme et pose</div>
+        <div class="ob-opt" onclick="selOpt(this)">Energique</div>
+        <div class="ob-opt" onclick="selOpt(this)">Tres punchy et impactant</div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px;">
+      <label class="field-lbl">Maniere de parler</label>
+      <div class="ob-opts" id="ob5-langage-opts">
+        <div class="ob-opt" onclick="selOpt(this)">Simple et vulgarise — tout le monde comprend</div>
+        <div class="ob-opt" onclick="selOpt(this)">Expert et technique — je m adresse a des pros</div>
+      </div>
+    </div>
+    <div class="ob-nav">
+      <div class="ob-back" onclick="go('ob4')">← Retour</div>
+      <button class="btn" style="width:auto;padding:13px 24px;" onclick="doSignup()">
+        <span class="btn-txt">Terminer</span><span class="btn-arr">→</span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -411,12 +534,15 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
     <div class="mini-grid" style="margin-bottom:16px;">
       <div class="mini" onclick="go('sessions')"><div class="mini-lbl">Sessions</div><div class="mini-val" id="home-nb-sess">0</div><div class="mini-sub" id="home-sess-sub">0 a venir</div></div>
       <div class="mini" onclick="go('scripts')"><div class="mini-lbl">Scripts</div><div class="mini-val" id="home-nb-scripts">0</div><div class="mini-sub">generes</div></div>
+      <div class="mini" onclick="go('scripts')"><div class="mini-lbl">Videos tournees</div><div class="mini-val" id="home-nb-tourne">0</div><div class="mini-sub" style="color:#f5c518;">🎬 marquees</div></div>
+      <div class="mini" onclick="go('sessions')"><div class="mini-lbl">Heures studio</div><div class="mini-val" id="home-nb-heures">0</div><div class="mini-sub">au total</div></div>
     </div>
-    <div class="sec-lbl" style="margin-bottom:10px;">Prochaine session</div>
-    <div class="next-sess">
-      <div class="tag-up">A venir</div>
-      <div class="sess-date" id="home-next-sess">Aucune session</div>
-      <div class="sess-meta" id="home-next-meta"></div>
+    <div class="sec-lbl" style="margin-bottom:10px;">Prochaines sessions</div>
+    <div id="home-next-sessions">
+      <div class="next-sess">
+        <div class="tag-up">A venir</div>
+        <div class="sess-date">Aucune session a venir</div>
+      </div>
     </div>
     <div style="height:16px;"></div>
   </div>
@@ -453,7 +579,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
 
 <!-- COURS -->
 <div class="screen" id="screen-cours">
-  <div class="topbar"><div class="logo">septup.</div><div class="tr"><button class="ibtn" onclick="toggleTheme()">☀</button><div class="ibtn av" onclick="go('compte')">JS</div></div></div>
+  <div class="topbar"><div class="logo">septup.</div><div class="tr"><button class="ibtn" onclick="toggleTheme()">☀</button><div class="ibtn av" id="cours-av" onclick="go('compte')">JS</div></div></div>
   <div class="scroll">
     <div style="padding:8px 16px 16px;font-size:22px;font-weight:700;">Cours</div>
     <div class="sec-lbl" style="margin-bottom:10px;">Montage</div>
@@ -480,7 +606,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
 
 <!-- SCRIPTS -->
 <div class="screen" id="screen-scripts">
-  <div class="topbar"><div class="logo">septup.</div><div class="tr"><button class="ibtn" onclick="toggleTheme()">☀</button><div class="ibtn av" onclick="go('compte')">JS</div></div></div>
+  <div class="topbar"><div class="logo">septup.</div><div class="tr"><button class="ibtn" onclick="toggleTheme()">☀</button><div class="ibtn av" id="scripts-av" onclick="go('compte')">JS</div></div></div>
   <div class="scroll">
     <div style="padding:8px 16px 16px;font-size:22px;font-weight:700;">Mes <span style="color:var(--accent);">scripts</span></div>
     <div id="export-bar" style="display:none;" class="export-bar">
@@ -505,7 +631,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
 
 <!-- POINTS -->
 <div class="screen" id="screen-points">
-  <div class="topbar"><div class="logo">septup.</div><div class="tr"><button class="ibtn" onclick="toggleTheme()">☀</button><div class="ibtn av" onclick="go('compte')">JS</div></div></div>
+  <div class="topbar"><div class="logo">septup.</div><div class="tr"><button class="ibtn" onclick="toggleTheme()">☀</button><div class="ibtn av" id="points-av" onclick="go('compte')">JS</div></div></div>
   <div class="scroll">
     <div class="hero-card" style="cursor:default;margin-bottom:16px;">
       <div style="font-size:13px;color:var(--text2);margin-bottom:4px;">Solde actuel</div>
@@ -549,13 +675,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
     <div style="padding:8px 16px 24px;text-align:center;">
       <div class="av-big" id="compte-av">JS</div>
       <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="compte-name">Jean Serafin</div>
-      <div style="font-size:13px;color:var(--text3);margin-bottom:10px;" id="compte-email">jean@studio.fr</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:10px;" id="compte-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e18b84808fa192959485888ecf8793">[email&#160;protected]</a></div>
       <div class="palier-badge"><div class="palier-dot"></div><div class="palier-txt" id="compte-palier">Bronze</div></div>
     </div>
     <div class="card-sm" style="margin-bottom:16px;">
-      <div class="crow"><div class="crow-lbl">Modifier le profil de marque</div><div style="font-size:12px;color:var(--accent);">Editer ›</div></div>
-      <div class="crow"><div class="crow-lbl">Modifier le nom</div><div style="color:var(--text3);">›</div></div>
-      <div class="crow"><div class="crow-lbl">Modifier l email</div><div style="color:var(--text3);">›</div></div>
+      <div class="crow" onclick="openEditProfil()"><div class="crow-lbl">Modifier le profil de marque</div><div style="font-size:12px;color:var(--accent);">Editer ›</div></div>
+      <div class="crow" onclick="openEditNom()"><div class="crow-lbl">Modifier le nom</div><div style="color:var(--text3);">›</div></div>
+
       <div class="crow" style="border-bottom:none;"><div class="crow-lbl">Palier actuel</div><div style="font-size:12px;color:var(--accent);" id="compte-palier2">🥉 Bronze</div></div>
     </div>
     <button class="logout-btn" onclick="doLogout()">Se deconnecter</button>
@@ -576,7 +702,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
     <div class="modal-handle"></div>
     <div class="modal-hdr"><div class="modal-title">Que veux-tu faire ?</div><button class="modal-close" onclick="closeHub()">✕</button></div>
     <div class="hub-btn primary" onclick="closeHub();openGen()"><div><div class="hub-title">✦ Generer un script IA</div><div class="hub-sub">Script sur mesure base sur ton profil de marque</div></div><div style="font-size:20px;color:var(--accent);">→</div></div>
-    <div class="hub-btn" onclick="closeHub();openStory()"><div><div class="hub-title">Template story Instagram</div><div class="hub-sub">Partager ta session sur Instagram</div></div><div style="font-size:20px;color:var(--text3);">→</div></div>
+    <div class="hub-btn" onclick="closeHub();openGenPodcast()"><div><div class="hub-title">🎙 Intro & Outro podcast</div><div class="hub-sub">Genere une introduction et une conclusion pour ton episode</div></div><div style="font-size:20px;color:var(--text3);">→</div></div>
     <div style="height:16px;"></div>
   </div>
 </div>
@@ -663,7 +789,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
 <div class="modal-overlay" id="modal-editor" onclick="if(event.target===this)closeEditor()">
   <div class="modal editor-modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
-    <div class="modal-hdr"><div class="modal-title" id="editor-title">Script</div><button class="modal-close" onclick="closeEditor()">✕</button></div>
+    <div class="modal-hdr" style="padding:14px 20px;"><div class="modal-title" id="editor-title">Script</div><button class="modal-close" style="min-width:34px;min-height:34px;flex-shrink:0;margin-left:8px;" onclick="closeEditor()">✕</button></div>
     <div class="editor-body">
       <div class="editor-vir">
         <div class="editor-vir-left">
@@ -675,15 +801,16 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
         <div><div class="editor-vir-grade" id="editor-vir-grade">-</div></div>
       </div>
       <div class="editor-ta" id="editor-ta" contenteditable="true" oninput="onEditorChange()" data-placeholder="Tape ton script ici..."></div>
-      <button class="editor-regen-btn" onclick="openRegenFromEditor()">✦ Regenerer ce script</button>
+      
     </div>
     <div class="editor-footer">
       <button class="copy-script-btn" id="copy-script-btn" onclick="copyScriptContent()">Copier le script</button>
-      <button class="btn" onclick="saveEditor()"><span class="btn-txt">Sauvegarder</span><span class="btn-arr">→</span></button>
-      <div style="display:flex;gap:8px;">
+      <div style="font-size:11px;color:var(--text3);text-align:center;padding:4px 0;" id="autosave-status">Les modifications sont sauvegardées automatiquement</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="sv-btn ghost" onclick="alert('Export PDF disponible en production')">PDF</button>
         <button class="sv-btn ghost" onclick="alert('Export Word disponible en production')">Word</button>
         <button class="sv-btn ghost" onclick="alert('Export TXT disponible en production')">TXT</button>
+        <button class="sv-btn ghost" id="btn-tourne" onclick="markAsTourne()" style="color:#f5c518;border-color:rgba(245,197,24,0.3);">🎬 Tourné</button>
         <button class="sv-btn danger" onclick="deleteCurrentScript()">Supprimer</button>
       </div>
     </div>
@@ -724,6 +851,121 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); -web
     <div class="story-actions">
       <button class="story-copy" id="copy-btn" onclick="copyStory()">Copier le texte</button>
       <button class="story-close-btn" onclick="closeStory()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><!-- MODAL EDIT PROFIL -->
+<div class="modal-overlay" id="modal-edit-profil" onclick="if(event.target===this)closeEditProfil()">
+  <div class="modal" style="max-height:92vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr"><div class="modal-title">Mon profil de marque</div><button class="modal-close" onclick="closeEditProfil()">✕</button></div>
+    <div style="flex:1;overflow-y:auto;padding:16px 20px;">
+
+      <!-- BLOC 1 : Identite business -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Identite business</div>
+      <div class="field"><label class="field-lbl">Secteur / metier</label><input class="field-input" id="ep-secteur" placeholder="Ex: Coach business, Agence immo..."></div>
+      <div class="field"><label class="field-lbl">Offre principale</label><input class="field-input" id="ep-offre" placeholder="Ex: Formation en ligne, Logiciel..."></div>
+      <div class="field">
+        <label class="field-lbl">Prix moyen de l offre</label>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="ep-prix-opts">
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-prix')">Moins de 500 €</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-prix')">500 € – 2 000 €</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-prix')">2 000 € – 10 000 €</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-prix')">Plus de 10 000 €</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Niveau de maturite</label>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="ep-maturite-opts">
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-maturite')">Debutant — je lance mon activite</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-maturite')">Intermediaire — j ai deja des clients</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-maturite')">Avance — j ai une audience etablie</div>
+        </div>
+      </div>
+
+      <!-- SEPARATEUR -->
+      <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+      <!-- BLOC 2 : Cible -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Ta cible</div>
+      <div class="field"><label class="field-lbl">Mon client ideal c est</label><input class="field-input" id="ep-cible" placeholder="Ex: Directeur RH en PME, entrepreneur solo..."></div>
+      <div class="field"><label class="field-lbl">Son plus grand probleme</label><textarea class="field-ta" id="ep-douleur" rows="3" placeholder="Ce qui l empeche de dormir..."></textarea></div>
+      <div class="field"><label class="field-lbl">La transformation que tu lui apportes</label><textarea class="field-ta" id="ep-transformation" rows="3" placeholder="Avant / apres..."></textarea></div>
+
+      <!-- SEPARATEUR -->
+      <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+      <!-- BLOC 3 : Objectif contenu -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Objectif contenu</div>
+      <div class="field">
+        <label class="field-lbl">Objectif principal</label>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="ep-objectif-opts">
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-objectif')">Notoriete — etre connu et reconnu</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-objectif')">Engagement — creer une communaute</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-objectif')">Leads — generer des prospects</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-objectif')">Vente — convertir directement</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">KPI prioritaire</label>
+        <div class="ob-chips" id="ep-kpi-chips">
+          <div class="ob-chip" onclick="this.classList.toggle('sel')">Vues</div>
+          <div class="ob-chip" onclick="this.classList.toggle('sel')">Abonnes</div>
+          <div class="ob-chip" onclick="this.classList.toggle('sel')">DM / messages</div>
+          <div class="ob-chip" onclick="this.classList.toggle('sel')">Clics lien</div>
+          <div class="ob-chip" onclick="this.classList.toggle('sel')">Appels decouverte</div>
+        </div>
+      </div>
+
+      <!-- SEPARATEUR -->
+      <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+      <!-- BLOC 4 : ADN communication -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">ADN de communication</div>
+      <div class="field">
+        <label class="field-lbl">Ton prefere</label>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="ep-ton-opts">
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-ton')">Fun et accessible</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-ton')">Serieux et professionnel</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-ton')">Premium et inspire</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-ton')">Provocateur et direct</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-ton')">Inspirant et humain</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Niveau d intensite</label>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="ep-intensite-opts">
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-intensite')">Calme et pose</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-intensite')">Energique</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-intensite')">Tres punchy et impactant</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Maniere de parler</label>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="ep-langage-opts">
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-langage')">Simple et vulgarise</div>
+          <div class="ob-opt" onclick="selEditOpt(this,'ep-langage')">Expert et technique</div>
+        </div>
+      </div>
+
+    </div>
+    <div style="padding:12px 20px 24px;border-top:1px solid var(--border);">
+      <button class="btn" onclick="saveEditProfil()"><span class="btn-txt">Sauvegarder</span><span class="btn-arr">→</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT NOM -->
+<div class="modal-overlay" id="modal-edit-nom" onclick="if(event.target===this)closeEditNom()">
+  <div class="modal" style="padding-bottom:28px;" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr"><div class="modal-title">Modifier le nom</div><button class="modal-close" onclick="closeEditNom()">✕</button></div>
+    <div style="padding:16px 20px;">
+      <div class="field"><label class="field-lbl">Nom complet</label><input class="field-input" id="edit-nom-input" placeholder="Ton nom complet"></div>
+    </div>
+    <div style="padding:0 20px;">
+      <button class="btn" onclick="saveEditNom()"><span class="btn-txt">Sauvegarder</span><span class="btn-arr">→</span></button>
     </div>
   </div>
 </div>
@@ -884,12 +1126,17 @@ async function loadClientData(email) {
   return records.length ? records[0] : null;
 }
 
-async function loadSessions(clientId) {
-  return await atFetch('Reservation', 'FIND("' + clientId + '",ARRAYJOIN({Client}))', 'sort[0][field]=Date&sort[0][direction]=desc');
+async function loadSessions(email) {
+  var filter = encodeURIComponent('{Email_reservation}="' + email + '"');
+  var url = 'https://api.airtable.com/v0/' + AT_BASE + '/R%C3%A9servation?filterByFormula=' + filter + '&sort[0][field]=Date&sort[0][direction]=desc';
+  var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + AT_TOKEN } });
+  var data = await res.json();
+  return data.records || [];
 }
 
-async function loadScripts(clientId) {
-  var records = await atFetch('Scripts', 'FIND("' + clientId + '",ARRAYJOIN({Client}))', 'sort[0][field]=Date_creation&sort[0][direction]=desc');
+async function loadScripts(clientId, email) {
+  var filter = email ? '{Email_client}="' + email + '"' : 'FALSE()';
+  var records = await atFetch('Scripts', filter, 'sort[0][field]=Date_creation&sort[0][direction]=desc');
   scriptsStore = {};
   var months = ['jan.','fev.','mars','avr.','mai','juin','juil.','aout','sep.','oct.','nov.','dec.'];
   records.forEach(function(r) {
@@ -897,7 +1144,7 @@ async function loadScripts(clientId) {
     var d = f['Date_creation'] ? new Date(f['Date_creation']) : new Date();
     var dateStr = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     var statut = f['Statut'] || 'Brouillon';
-    var statusMap = { 'Valide': 'st-valid', 'Utilise': 'st-used', 'Brouillon': 'st-draft' };
+    var statusMap = { 'Validé': 'st-valid', 'Utilisé': 'st-used', 'Brouillon': 'st-draft', 'Tourné': 'st-tourne' };
     scriptsStore[r.id] = {
       title: f['Titre'] || 'Sans titre',
       content: f['Contenu'] || '',
@@ -910,6 +1157,7 @@ async function loadScripts(clientId) {
   renderScriptsList();
   var el = document.getElementById('home-nb-scripts');
   if (el) el.textContent = records.length;
+  updateHomeTourneCount();
 }
 
 // ═══ RENDER ═══
@@ -932,7 +1180,8 @@ function renderAll(client, email) {
   el = document.getElementById('home-bar'); if (el) el.style.width = pct + '%';
   el = document.getElementById('home-bar-left'); if (el) el.textContent = palier + ' · ' + pts + ' pts';
   el = document.getElementById('home-bar-right'); if (el) el.textContent = nextLbl;
-  el = document.getElementById('home-av'); if (el) el.textContent = initials;
+  // Mettre à jour tous les avatars de l'app
+  document.querySelectorAll('.av').forEach(function(av) { av.textContent = initials; });
 
   // Points
   el = document.getElementById('pts-big'); if (el) el.textContent = pts;
@@ -954,6 +1203,11 @@ function renderAll(client, email) {
 }
 
 function renderSessions(records) {
+  if (!records || !Array.isArray(records)) {
+    var p = document.getElementById('sess-passees');
+    if (p) p.innerHTML = '<div style="padding:20px 16px;font-size:13px;color:var(--red);">Erreur de chargement des sessions</div>';
+    return;
+  }
   var now = new Date();
   var months = ['jan.','fev.','mars','avr.','mai','juin','juil.','aout','sep.','oct.','nov.','dec.'];
   var passees = records.filter(function(r) { return new Date(r.fields['Date']) < now; });
@@ -964,7 +1218,7 @@ function renderSessions(records) {
     var d = new Date(f['Date']);
     var dateStr = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     var formule = f['Formule choisi'] || '';
-    var duree = f['Duree'] || f['Durée'] || 1;
+    var duree = f['Durée'] || f['Duree'] || 1;
     var pts = formule === 'Essentielle' ? duree * 75 : duree * 60;
     var tag = isUp ? '<div class="tag-up">A venir</div>' : '<div class="tag-done">Termine</div>';
     return '<div class="sblock"><div class="sblock-hdr" onclick="toggleFiles(this)">'
@@ -978,6 +1232,54 @@ function renderSessions(records) {
   if (passEl) passEl.innerHTML = passees.length ? passees.map(function(r) { return makeCard(r, false); }).join('') : '<div style="padding:20px 16px;font-size:13px;color:var(--text3);">Aucune session passee</div>';
   if (avenirEl) avenirEl.innerHTML = avenir.length ? avenir.map(function(r) { return makeCard(r, true); }).join('') : '<div style="padding:20px 16px;font-size:13px;color:var(--text3);">Aucune session a venir</div>';
 
+  // Mettre à jour home
+  var el = document.getElementById('home-nb-sess'); if (el) el.textContent = records.length;
+  el = document.getElementById('home-sess-sub'); if (el) el.textContent = avenir.length + ' a venir';
+  updateHomeHeures(records);
+
+  // Historique des points
+  var histEl = document.getElementById('pts-history');
+  if (histEl) {
+    if (passees.length === 0) {
+      histEl.innerHTML = '<div class="lrow"><div><div class="lmotif" style="color:var(--text3);">Aucune session pour le moment</div></div></div>';
+    } else {
+      var histHtml = '';
+      passees.slice(0, 5).forEach(function(r) {
+        var f = r.fields;
+        var d = new Date(f['Date']);
+        var dateStr = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        var formule = f['Formule choisi'] || '';
+        var duree = f['Durée'] || 1;
+        var pts = formule === 'Essentielle' ? duree * 75 : duree * 60;
+        histHtml += '<div class="lrow"><div><div class="lmotif">Session ' + formule + ' ' + duree + 'h</div><div class="ldate">' + dateStr + '</div></div><div class="lpts">+' + pts + '</div></div>';
+      });
+      histEl.innerHTML = histHtml;
+    }
+  }
+
+  // Prochaines sessions — toutes listées
+  var nextEl = document.getElementById('home-next-sessions');
+  if (nextEl) {
+    if (avenir.length === 0) {
+      nextEl.innerHTML = '<div class="next-sess"><div class="tag-done">Aucune session a venir</div><div class="sess-date" style="font-size:14px;color:var(--text3);">Reserve ta prochaine session</div></div>';
+    } else {
+      var nextHtml = '';
+      avenir.forEach(function(r) {
+        var f = r.fields;
+        var d = new Date(f['Date']);
+        var dateStr = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        var hh = d.getHours();
+        var mm = d.getMinutes() ? d.getMinutes() : '00';
+        nextHtml += '<div class="next-sess" style="margin-bottom:10px;">'
+          + '<div class="tag-up">A venir</div>'
+          + '<div class="sess-date">' + dateStr + '</div>'
+          + '<div class="sess-meta">🕐 ' + hh + 'h' + mm + ' · Formule ' + (f['Formule choisi'] || '') + ' · ' + (f['Durée'] || f['Duree'] || '') + 'h</div>'
+          + '</div>';
+      });
+      nextEl.innerHTML = nextHtml;
+    }
+  }
+
   var el = document.getElementById('home-nb-sess'); if (el) el.textContent = records.length;
   el = document.getElementById('home-sess-sub'); if (el) el.textContent = avenir.length + ' a venir';
 
@@ -985,7 +1287,7 @@ function renderSessions(records) {
     var nextF = avenir[0].fields;
     var d = new Date(nextF['Date']);
     el = document.getElementById('home-next-sess'); if (el) el.textContent = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
-    el = document.getElementById('home-next-meta'); if (el) el.textContent = 'Formule ' + (nextF['Formule choisi'] || '') + ' · ' + (nextF['Duree'] || nextF['Durée'] || '') + 'h';
+    el = document.getElementById('home-next-meta'); if (el) el.textContent = 'Formule ' + (nextF['Formule choisi'] || '') + ' · ' + (nextF['Durée'] || nextF['Duree'] || '') + 'h';
   }
 }
 
@@ -1018,6 +1320,7 @@ function openScriptById(id) {
   var s = scriptsStore[id];
   if (!s) return;
   currentEditorId = id;
+  currentEditorText = s.content; // Stocke le texte brut pour doRegen()
   document.getElementById('editor-title').textContent = s.title;
   document.getElementById('editor-ta').innerHTML = renderEditorContent(s.content);
   document.getElementById('modal-editor').classList.add('open');
@@ -1085,7 +1388,8 @@ async function saveEditor() {
       await atCreate('Scripts', {
         'Titre': title, 'Contenu': content,
         'Score_viralite': parseFloat(score) || 0,
-        'Statut': 'Valide', 'Client': [clientRecord.id],
+        'Statut': 'Validé', 'Client': [clientRecord.id],
+        'Email_client': currentUser ? currentUser.email : '',
         'Date_creation': new Date().toISOString()
       });
     }
@@ -1127,7 +1431,53 @@ function computeVirality(text) {
 
 function onEditorChange() {
   if (editorTimer) clearTimeout(editorTimer);
-  editorTimer = setTimeout(updateEditorVirality, 600);
+  editorTimer = setTimeout(function() {
+    updateEditorVirality();
+    autoSaveEditor();
+  }, 800);
+}
+
+async function autoSaveEditor() {
+  if (!clientRecord || !currentEditorId) return;
+  var content = getEditorText();
+  if (!content.trim()) return;
+  var score = document.getElementById('editor-vir-score').textContent;
+  var statusEl = document.getElementById('autosave-status');
+  
+  var s = scriptsStore[currentEditorId];
+  if (s && s.airtableId) {
+    if (statusEl) statusEl.textContent = 'Sauvegarde...';
+    try {
+      await fetch('https://api.airtable.com/v0/' + AT_BASE + '/Scripts/' + s.airtableId, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + AT_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { 'Contenu': content, 'Score_viralite': parseFloat(score) || 0 } })
+      });
+      s.content = content;
+      if (statusEl) statusEl.textContent = 'Sauvegardé ✓';
+    } catch(e) {
+      if (statusEl) statusEl.textContent = 'Erreur de sauvegarde';
+    }
+  } else if (s && !s.airtableId) {
+    // Créer dans Airtable si pas encore sauvegardé
+    if (statusEl) statusEl.textContent = 'Sauvegarde...';
+    try {
+      var rec = await atCreate('Scripts', {
+        'Titre': s.title, 'Contenu': content,
+        'Score_viralite': parseFloat(score) || 0,
+        'Statut': 'Validé', 'Client': [clientRecord.id],
+        'Email_client': currentUser ? currentUser.email : '',
+        'Date_creation': new Date().toISOString()
+      });
+      if (rec.id) {
+        s.airtableId = rec.id;
+        s.content = content;
+        if (statusEl) statusEl.textContent = 'Sauvegardé ✓';
+      }
+    } catch(e) {
+      if (statusEl) statusEl.textContent = 'Erreur de sauvegarde';
+    }
+  }
 }
 
 function updateEditorVirality() {
@@ -1150,25 +1500,7 @@ function openGen() {
 }
 function closeGen() { document.getElementById('modal-gen').classList.remove('open'); if (msgTimer) clearInterval(msgTimer); }
 
-function nextGenStep() {
-  if (genStep === 1) {
-    genData.sujet = document.getElementById('gen-sujet').value;
-    if (!genData.sujet.trim()) { alert('Decris d abord le sujet !'); return; }
-    genStep = 2;
-    document.getElementById('gen-step-1').classList.remove('active');
-    document.getElementById('gen-step-2').classList.add('active');
-    document.getElementById('gen-next-txt').textContent = 'Generer ✦';
-  } else if (genStep === 2) {
-    genStep = 3;
-    document.getElementById('gen-step-2').classList.remove('active');
-    document.getElementById('gen-step-3').classList.add('active');
-    document.getElementById('gen-footer').style.display = 'none';
-    document.getElementById('gen-generating').style.display = 'block';
-    document.getElementById('script-result').classList.remove('active');
-    startGenAnim();
-    callAPI(null, null);
-  }
-}
+
 
 function startGenAnim() {
   msgIdx = 0;
@@ -1233,9 +1565,10 @@ function validateScript() {
     atCreate('Scripts', {
       'Titre': title, 'Contenu': text,
       'Format': fmts[genData.format] || 'Reel 60s',
-      'Angle': angles[genData.angle] || 'Educatif',
+      'Angle': angles[genData.angle] || 'Éducatif',
       'Score_viralite': parseFloat(document.getElementById('gen-vir-score').textContent) || 0,
-      'Statut': 'Valide', 'Client': [clientRecord.id],
+      'Statut': 'Validé', 'Client': [clientRecord.id],
+      'Email_client': currentUser ? currentUser.email : '',
       'Date_creation': new Date().toISOString()
     }).then(function(rec) {
       if (rec.id && scriptsStore[id]) { scriptsStore[id].airtableId = rec.id; scriptsStore[rec.id] = scriptsStore[id]; delete scriptsStore[id]; renderScriptsList(); }
@@ -1267,15 +1600,15 @@ function doRegen() {
   if (!prevScript.trim()) { alert('Aucun script a regenerer'); return; }
   closeRegen();
   closeEditor();
-  if (!document.getElementById('modal-gen').classList.contains('open')) {
-    document.getElementById('modal-gen').classList.add('open');
-  }
+  // Ouvrir la modal de génération à l'étape 3
+  document.getElementById('modal-gen').classList.add('open');
   genStep = 3;
   document.querySelectorAll('.gen-step').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById('gen-step-3').classList.add('active');
   document.getElementById('gen-footer').style.display = 'none';
   document.getElementById('gen-generating').style.display = 'block';
   document.getElementById('script-result').classList.remove('active');
+  document.getElementById('gen-anim-txt').textContent = genMsgs[0];
   startGenAnim();
   callAPI(prevScript, instruction);
 }
@@ -1291,21 +1624,67 @@ function initSupabase() {
 }
 
 async function checkSession() {
+  // Gérer le retour OAuth Google (token dans l'URL #access_token=...)
+  if (window.location.hash && window.location.hash.includes('access_token')) {
+    // Supabase va intercepter automatiquement le hash et créer la session
+    // On attend un court délai pour que Supabase traite le token
+    await new Promise(function(r) { setTimeout(r, 500); });
+    // Nettoie l'URL sans recharger la page
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   var result = await sb.auth.getSession();
   if (result.data && result.data.session) {
     currentUser = result.data.session.user;
-    await loadUserData(currentUser.email);
+    var email = currentUser.email;
+
+    // Vérifie si le client existe dans Airtable
+    var client = await loadClientData(email);
+
+    if (!client) {
+      // Nouveau client Google → créer automatiquement son profil Airtable
+      // On utilise le nom Google si disponible
+      var nom = currentUser.user_metadata && currentUser.user_metadata.full_name
+        ? currentUser.user_metadata.full_name
+        : email;
+      await atCreate('Client', {
+        'Nom_complet': nom,
+        'Email': email
+      });
+      // Recharger le profil créé
+      client = await loadClientData(email);
+    }
+
+    if (client) {
+      clientRecord = client;
+      renderAll(clientRecord, email);
+      var sessions = [];
+      try { sessions = await loadSessions(email); } catch(e) {}
+      renderSessions(sessions);
+      await loadScripts(clientRecord.id, email);
+      go('home');
+    } else {
+      // Fallback : onboarding si la création Airtable a échoué
+      go('ob1');
+    }
   }
 }
 
 async function loadUserData(email) {
+  // Reset complet avant de charger les nouvelles données
+  clientRecord = null;
+  scriptsStore = {};
+  selectedScripts = {};
+  renderScriptsList();
+
   var client = await loadClientData(email);
   if (!client) { go('ob1'); return; }
   clientRecord = client;
   renderAll(clientRecord, email);
-  var sessions = await loadSessions(clientRecord.id);
+  var sessions = [];
+  try { sessions = await loadSessions(email); } catch(e) { console.error('Sessions error:', e); }
   renderSessions(sessions);
-  await loadScripts(clientRecord.id);
+  await loadScripts(clientRecord.id, email);
   go('home');
 }
 
@@ -1313,50 +1692,98 @@ async function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var password = document.getElementById('login-password').value;
   if (!email || !password) { alert('Email et mot de passe requis'); return; }
+  // Affiche le spinner et désactive le bouton pendant la connexion
+  var spinner = document.getElementById('login-spinner');
+  var btn = document.getElementById('login-btn');
+  if (spinner) spinner.classList.add('visible');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
   var result = await sb.auth.signInWithPassword({ email: email, password: password });
+  // Cache le spinner et réactive le bouton
+  if (spinner) spinner.classList.remove('visible');
+  if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
   if (result.error) { alert('Erreur : ' + result.error.message); return; }
   currentUser = result.data.user;
   await loadUserData(currentUser.email);
 }
 
 async function doLoginGoogle() {
-  await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+  // redirectTo = URL de base sans paramètres pour éviter les boucles
+  var baseUrl = window.location.origin + window.location.pathname;
+  await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: baseUrl } });
 }
 
 async function doLogout() {
   await sb.auth.signOut();
-  currentUser = null; clientRecord = null; scriptsStore = {};
+  currentUser = null;
+  clientRecord = null;
+  scriptsStore = {};
+  selectedScripts = {};
+  currentEditorId = null;
+  currentEditorText = '';
+  // Reset UI
+  document.getElementById('scripts-list').innerHTML = '<div style="padding:24px 16px;text-align:center;font-size:13px;color:var(--text3);">Chargement...</div>';
+  document.getElementById('sess-passees').innerHTML = '<div style="padding:20px 16px;font-size:13px;color:var(--text3);">Chargement...</div>';
+  document.getElementById('sess-avenir').innerHTML = '';
   go('login');
 }
 
 async function doSignup() {
-  var email = document.getElementById('ob-email') ? document.getElementById('ob-email').value.trim() : '';
-  var password = document.getElementById('ob-password') ? document.getElementById('ob-password').value : '';
+  var nom = (document.getElementById('ob-nom') || {}).value || '';
+  var email = (document.getElementById('ob-email') || {}).value.trim();
+  var password = (document.getElementById('ob-password') || {}).value;
+
+  if (!nom) { alert('Ton nom est requis'); return; }
   if (!email || !password) { alert('Email et mot de passe requis'); return; }
   if (password.length < 8) { alert('Mot de passe trop court (min. 8 caracteres)'); return; }
+
   var existing = await loadClientData(email);
   var result = await sb.auth.signUp({ email: email, password: password });
   if (result.error) { alert('Erreur : ' + result.error.message); return; }
+
   if (existing) {
     clientRecord = existing;
   } else {
-    var obType = document.querySelector('#screen-ob1 .ob-opt.sel');
-    var obCamera = document.querySelector('#screen-ob5 .ob-opt.sel');
+    // Lire les réponses onboarding
+    var obPrix = document.querySelector('#ob2-prix-opts .ob-opt.sel');
+    var obMaturite = document.querySelector('#ob2-maturite-opts .ob-opt.sel');
+    var obObjectif = document.querySelector('#ob4-objectif-opts .ob-opt.sel');
+    var obTon = document.querySelector('#ob5-ton-opts .ob-opt.sel');
+    var obIntensite = document.querySelector('#ob5-intensite-opts .ob-opt.sel');
+    var obLangage = document.querySelector('#ob5-langage-opts .ob-opt.sel');
+    // KPI = chips multiples
+    var obKpi = Array.from(document.querySelectorAll('#ob4-kpi-chips .ob-chip.sel'))
+      .map(function(c) { return c.textContent.trim(); }).join(', ');
+
     await atCreate('Client', {
-      'Nom_complet': email,
+      'Nom_complet': nom,
       'Email': email,
-      'Pnts_fidelite': 0,
-      'Niv_fidelite_badge': 'Bronze',
-      'Onboarding_type': obType ? obType.textContent.trim() : '',
-      'Onboarding_secteur': (document.getElementById('ob1-secteur') || {}).value || '',
-      'Onboarding_objectif': (document.getElementById('ob1-activite') || {}).value || '',
+      'Onboarding_secteur': (document.getElementById('ob2-activite') || {}).value || '',
+      'Onboarding_offre': (document.getElementById('ob2-offre') || {}).value || '',
+      'Onboarding_prix': obPrix ? obPrix.textContent.trim() : '',
+      'Onboarding_maturite': obMaturite ? obMaturite.textContent.trim() : '',
       'Onboarding_cible': (document.getElementById('ob3-cible') || {}).value || '',
-      'Onboarding_camera': obCamera ? obCamera.textContent.trim() : ''
+      'Onboarding_douleur': (document.getElementById('ob3-douleur') || {}).value || '',
+      'Onboarding_transformation': (document.getElementById('ob3-transformation') || {}).value || '',
+      'Onboarding_objectif': obObjectif ? obObjectif.textContent.trim() : '',
+      'Onboarding_kpi': obKpi,
+      'Onboarding_ton': obTon ? obTon.textContent.trim() : '',
+      'Onboarding_intensite': obIntensite ? obIntensite.textContent.trim() : '',
+      'Onboarding_langage': obLangage ? obLangage.textContent.trim() : ''
     });
     clientRecord = await loadClientData(email);
   }
+
   currentUser = { email: email };
-  if (clientRecord) { renderAll(clientRecord, email); }
+  if (clientRecord) {
+    renderAll(clientRecord, email);
+    // Créer le profil créateur lié
+    atCreate('Profils créateurs', {
+      'Nom': nom,
+      'Email': email,
+      'Client': [clientRecord.id],
+      'Supabase_uid': result.data && result.data.user ? result.data.user.id : ''
+    }).catch(function(e) { console.log('Profil createur:', e); });
+  }
   go('ob-done');
 }
 
@@ -1374,7 +1801,246 @@ async function doSignup() {
   }
 })();
 
-initSupabase();
-</script>
-</body>
-</html>
+// ═══ EDIT PROFIL / NOM ═══
+function selEditOpt(el, group) {
+  el.parentNode.querySelectorAll('.ob-opt').forEach(function(o) { o.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+
+function openEditProfil() {
+  if (!clientRecord) return;
+  var f = clientRecord.fields;
+
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('ep-secteur', f['Onboarding_secteur']);
+  set('ep-offre', f['Onboarding_offre']);
+  set('ep-cible', f['Onboarding_cible']);
+  set('ep-douleur', f['Onboarding_douleur']);
+  set('ep-transformation', f['Onboarding_transformation']);
+
+  var selOpts = function(containerId, val) {
+    document.querySelectorAll('#' + containerId + ' .ob-opt').forEach(function(o) {
+      o.classList.toggle('sel', o.textContent.trim() === val);
+    });
+  };
+  selOpts('ep-prix-opts', f['Onboarding_prix']);
+  selOpts('ep-maturite-opts', f['Onboarding_maturite']);
+  selOpts('ep-objectif-opts', f['Onboarding_objectif']);
+  selOpts('ep-ton-opts', f['Onboarding_ton']);
+  selOpts('ep-intensite-opts', f['Onboarding_intensite']);
+  selOpts('ep-langage-opts', f['Onboarding_langage']);
+
+  var kpiVal = f['Onboarding_kpi'] || '';
+  document.querySelectorAll('#ep-kpi-chips .ob-chip').forEach(function(chip) {
+    chip.classList.toggle('sel', kpiVal.includes(chip.textContent.trim()));
+  });
+
+  document.getElementById('modal-edit-profil').classList.add('open');
+}
+function closeEditProfil() { document.getElementById('modal-edit-profil').classList.remove('open'); }
+
+async function saveEditProfil() {
+  if (!clientRecord) return;
+
+  var getOpt = function(containerId) {
+    var el = document.querySelector('#' + containerId + ' .ob-opt.sel');
+    return el ? el.textContent.trim() : '';
+  };
+  var kpi = Array.from(document.querySelectorAll('#ep-kpi-chips .ob-chip.sel'))
+    .map(function(c) { return c.textContent.trim(); }).join(', ');
+
+  var fields = {
+    'Onboarding_secteur': (document.getElementById('ep-secteur') || {}).value || '',
+    'Onboarding_offre':   (document.getElementById('ep-offre') || {}).value || '',
+    'Onboarding_prix':    getOpt('ep-prix-opts'),
+    'Onboarding_maturite': getOpt('ep-maturite-opts'),
+    'Onboarding_cible':   (document.getElementById('ep-cible') || {}).value || '',
+    'Onboarding_douleur': (document.getElementById('ep-douleur') || {}).value || '',
+    'Onboarding_transformation': (document.getElementById('ep-transformation') || {}).value || '',
+    'Onboarding_objectif': getOpt('ep-objectif-opts'),
+    'Onboarding_kpi':     kpi,
+    'Onboarding_ton':     getOpt('ep-ton-opts'),
+    'Onboarding_intensite': getOpt('ep-intensite-opts'),
+    'Onboarding_langage': getOpt('ep-langage-opts')
+  };
+
+  try {
+    await fetch('https://api.airtable.com/v0/' + AT_BASE + '/Client/' + clientRecord.id, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + AT_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: fields })
+    });
+    Object.assign(clientRecord.fields, fields);
+    closeEditProfil();
+    alert('Profil mis a jour !');
+  } catch(e) {
+    alert('Erreur de sauvegarde');
+  }
+}
+function openEditNom() {
+  if (!clientRecord) return;
+  var el = document.getElementById('edit-nom-input');
+  if (el) el.value = clientRecord.fields['Nom_complet'] || '';
+  document.getElementById('modal-edit-nom').classList.add('open');
+}
+
+function closeEditNom() { document.getElementById('modal-edit-nom').classList.remove('open'); }
+
+async function saveEditNom() {
+  if (!clientRecord) return;
+  var nom = document.getElementById('edit-nom-input').value.trim();
+  if (!nom) { alert('Le nom ne peut pas etre vide'); return; }
+  try {
+    await fetch('https://api.airtable.com/v0/' + AT_BASE + '/Client/' + clientRecord.id, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + AT_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { 'Nom_complet': nom } })
+    });
+    clientRecord.fields['Nom_complet'] = nom;
+    // Mettre à jour l'UI
+    renderAll(clientRecord, currentUser ? currentUser.email : '');
+    closeEditNom();
+    alert('Nom mis a jour !');
+  } catch(e) {
+    alert('Erreur de sauvegarde');
+  }
+}
+
+// ═══ VOIR / MASQUER MOT DE PASSE ═══
+// el = id de l'input, btn = le bouton œil cliqué
+function togglePwd(inputId, btn) {
+  var input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';       // révèle le mot de passe
+    btn.textContent = '🙈';    // change l'icône
+  } else {
+    input.type = 'password';   // masque à nouveau
+    btn.textContent = '👁';
+  }
+}
+
+// ═══ MARQUER UN SCRIPT COMME TOURNÉ ═══
+async function markAsTourne() {
+  if (!currentEditorId) return;
+  var s = scriptsStore[currentEditorId];
+  if (!s) return;
+  var btn = document.getElementById('btn-tourne');
+  if (s.airtableId) {
+    try {
+      if (btn) btn.textContent = '...';
+      await fetch('https://api.airtable.com/v0/' + AT_BASE + '/Scripts/' + s.airtableId, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + AT_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { 'Statut': 'Tourné' } })
+      });
+      s.status = 'st-tourne';
+      s.statusLabel = 'Tourné';
+      renderScriptsList();
+      updateHomeTourneCount();
+      if (btn) btn.textContent = '✓ Tourné !';
+      setTimeout(function() { if (btn) btn.textContent = '🎬 Tourné'; }, 2000);
+    } catch(e) {
+      if (btn) btn.textContent = '🎬 Tourné';
+    }
+  }
+}
+
+// Met à jour le compteur de vidéos tournées sur la home
+function updateHomeTourneCount() {
+  var count = Object.values(scriptsStore).filter(function(s) { return s.status === 'st-tourne'; }).length;
+  var el = document.getElementById('home-nb-tourne');
+  if (el) el.textContent = count;
+}
+
+// Mettre à jour le compteur heures depuis les sessions
+function updateHomeHeures(sessions) {
+  var total = 0;
+  (sessions || []).forEach(function(r) {
+    total += parseFloat(r.fields['Durée'] || r.fields['Duree'] || 0);
+  });
+  var el = document.getElementById('home-nb-heures');
+  if (el) el.textContent = total;
+}
+
+// ═══ GÉNÉRATION INTRO/OUTRO PODCAST ═══
+function openGenPodcast() {
+  // Réutilise la modal de génération avec un mode podcast spécial
+  genStep = 1;
+  genData = { sujet: '', format: 'podcast', angle: 'intro_outro' };
+  document.querySelectorAll('.gen-step').forEach(function(s) { s.classList.remove('active'); });
+  // Aller directement à l'étape sujet avec un placeholder podcast
+  document.getElementById('gen-step-1').classList.add('active');
+  document.getElementById('gen-footer').style.display = 'block';
+  document.getElementById('gen-next-txt').textContent = 'Generer ✦';
+  document.getElementById('gen-sujet').placeholder = 'Ex: Episode sur le recrutement des talents en startup...';
+  // Changer le titre de la modal
+  document.querySelector('#modal-gen .modal-title').textContent = 'Intro & Outro Podcast';
+  document.getElementById('modal-gen').classList.add('open');
+  // Overrider nextGenStep pour générer directement
+  window._podcastMode = true;
+}
+
+// Override de nextGenStep pour le mode podcast
+var _origNextGenStep = null;
+function nextGenStep() {
+  if (window._podcastMode) {
+    var sujet = document.getElementById('gen-sujet').value;
+    if (!sujet.trim()) { alert('Decris le sujet de ton episode !'); return; }
+    genData.sujet = sujet;
+    window._podcastMode = false;
+    document.querySelector('#modal-gen .modal-title').textContent = 'Generer un script';
+    document.getElementById('gen-sujet').placeholder = 'Ex: Pourquoi 90% des entrepreneurs ratent leur lancement...';
+    // Passer à l'étape 3 directement
+    genStep = 3;
+    document.getElementById('gen-step-1').classList.remove('active');
+    document.getElementById('gen-step-3').classList.add('active');
+    document.getElementById('gen-footer').style.display = 'none';
+    document.getElementById('gen-generating').style.display = 'block';
+    document.getElementById('script-result').classList.remove('active');
+    startGenAnim();
+    // Prompt spécial intro/outro
+    callAPIPodcast(sujet);
+    return;
+  }
+  // Comportement normal
+  if (genStep === 1) {
+    genData.sujet = document.getElementById('gen-sujet').value;
+    if (!genData.sujet.trim()) { alert('Decris d abord le sujet !'); return; }
+    genStep = 2;
+    document.getElementById('gen-step-1').classList.remove('active');
+    document.getElementById('gen-step-2').classList.add('active');
+    document.getElementById('gen-next-txt').textContent = 'Generer ✦';
+  } else if (genStep === 2) {
+    genStep = 3;
+    document.getElementById('gen-step-2').classList.remove('active');
+    document.getElementById('gen-step-3').classList.add('active');
+    document.getElementById('gen-footer').style.display = 'none';
+    document.getElementById('gen-generating').style.display = 'block';
+    document.getElementById('script-result').classList.remove('active');
+    startGenAnim();
+    callAPI(null, null);
+  }
+}
+
+async function callAPIPodcast(sujet) {
+  var profil = clientRecord ? clientRecord.fields : {};
+  var parts = ["Tu es un expert en podcasting. Cree une INTRODUCTION et une CONCLUSION pour un episode de podcast sur : " + sujet + "."];
+  if (profil["Nom_complet"]) parts.push("Animateur : " + profil["Nom_complet"]);
+  if (profil["Onboarding_ton"]) parts.push("Ton : " + profil["Onboarding_ton"]);
+  if (profil["Onboarding_cible"]) parts.push("Audience : " + profil["Onboarding_cible"]);
+  parts.push("Structure OBLIGATOIRE - ACCROCHE : [Introduction engageante 30sec] CORPS : [Presentation episode] CONCLUSION : [Outro chaleureux] CTA : [Phrase finale percutante]. Direct, chaleureux, naturel a loral.");
+  var prompt = parts.join(" ");
+  try {
+    var res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] })
+    });
+    var data = await res.json();
+    var text = data.content && data.content[0] ? data.content[0].text : "Erreur de generation.";
+    showScript(text);
+  } catch(e) {
+    showScript("ACCROCHE\n\nBienvenue dans cet episode sur " + sujet + ". Aujourd hui on plonge dans un sujet qui va changer votre approche.\n\nCORPS\n\nDans cet episode, on va explorer en profondeur avec des exemples concrets et actionnables.\n\nCONCLUSION\n\nMerci d avoir ete la. Si cet episode vous a apporte de la valeur, abonnez-vous et partagez.\n\nCTA\n\nOn se retrouve la semaine prochaine !");
+  }
+}>
